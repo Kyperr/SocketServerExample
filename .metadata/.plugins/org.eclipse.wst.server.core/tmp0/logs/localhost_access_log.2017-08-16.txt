@@ -1,0 +1,8 @@
+127.0.0.1 - - [16/Aug/2017:12:13:59 -0700] "GET / HTTP/1.1" 404 1073
+0:0:0:0:0:0:0:1 - - [16/Aug/2017:12:14:00 -0700] "GET /ColonyGamePrototype/ HTTP/1.1" 404 1093
+0:0:0:0:0:0:0:1 - - [16/Aug/2017:12:14:17 -0700] "GET /ColonyGamePrototype/TestServlet HTTP/1.1" 200 456
+127.0.0.1 - - [16/Aug/2017:12:14:53 -0700] "GET / HTTP/1.1" 404 1073
+0:0:0:0:0:0:0:1 - - [16/Aug/2017:12:15:40 -0700] "GET /TestServlet HTTP/1.1" 404 1084
+0:0:0:0:0:0:0:1 - - [16/Aug/2017:12:15:40 -0700] "GET /favicon.ico HTTP/1.1" 404 1084
+0:0:0:0:0:0:0:1 - - [16/Aug/2017:12:15:53 -0700] "GET /ColonyGamePrototype/TestServlet HTTP/1.1" 200 456
+0:0:0:0:0:0:0:1 - - [16/Aug/2017:12:16:10 -0700] "POST /ColonyGamePrototype/TestServlet HTTP/1.1" 200 540

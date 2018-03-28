@@ -1,0 +1,149 @@
+package main;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class ColonyGameServerMain {
+
+	private final static int PORT = 45655;
+
+	/*
+	 * A ConcurrentHashMap for storing simple data. In this case it simply stores
+	 * the socket the user is connecting through, and the name of the connector.
+	 * 
+	 * There are two standard types of thread safe data structures. The typical
+	 * options are synchronized(course granularity) and concurrent(fine
+	 * granularity).
+	 * 
+	 */
+	private ConcurrentHashMap<Socket, String> members = new ConcurrentHashMap<>();
+	{
+		// This is sample data staticly initialized.
+		members.put(new Socket(), "Daniel McBride");
+		members.put(new Socket(), "Bridgette Campbell");
+	}
+
+	public ColonyGameServerMain() {
+	}
+
+	private void start() {
+
+		// Placed in a try-with-resources to catch failures.
+		try (ServerSocket service = new ServerSocket(PORT)) {// Create a server socket on port PORT.
+			while (true) {
+				System.out.println("Listening...");
+				// This part listens for input and once it hears input it accepts it.
+				Socket client = service.accept();
+				System.out.println("Connection established.");
+
+				/*
+				 * A SocketMessageHandler(SMH) is created and started. SMH extends Thread and is
+				 * therefore run in another thread.
+				 */
+				new SocketMessageHandler(client).start();
+			}
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+
+	}
+
+	/**
+	 * This is an object that handles input from a socket in another thread.
+	 * 
+	 * @author Daniel
+	 *
+	 */
+	private class SocketMessageHandler extends Thread {
+
+		private final Socket socket;
+
+		public SocketMessageHandler(Socket socket) {
+			this.socket = socket;
+		}
+
+		@Override
+		public void run() {
+			try (ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+					ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());) {
+
+				oos.writeObject("Connected.");
+				String name = "";// Defaults to something not valid.
+
+				// While the name string is not valid, ask for valid value.
+				while (!isValidName(name)) {
+					System.out.println("Requesting name.");
+					oos.writeObject("Send Name.");
+					name = (String) ois.readObject();
+					System.out.println("Checking validity of name: " + name);
+				}
+
+				System.out.println("Name recieved.");
+				oos.writeObject("Connected as: " + name + ".");
+				// Send list of other connected members.
+				sendMembers(oos);
+
+				/*
+				 * 
+				 * This part is poorly done. It should be a listener, but for this example it
+				 * works.
+				 * 
+				 * This thread will not spend the rest of it's life listening for the 'Members."
+				 * command to be given.
+				 */
+				String input = "";
+				while (true) {
+					input = (String) ois.readObject();
+					if (input.equals("Members.")) {
+						sendMembers(oos);
+					}
+				}
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+
+		}
+
+		/**
+		 * This will send a list of the existing users to the output stream.
+		 * 
+		 * @param oos
+		 * @throws IOException
+		 */
+		private void sendMembers(ObjectOutputStream oos) throws IOException {
+			// This is done for ease of change. Just sending map.values is dangerous.
+			List<String> names = new ArrayList<>();
+			for (Socket socket : members.keySet()) {
+				if (!socket.equals(this.socket)) {
+					names.add(members.get(socket));
+				}
+			}
+			oos.writeObject(names);
+		}
+
+		private boolean isValidName(String string) {
+			return !string.isEmpty();
+		}
+
+	}
+
+	public static void main(String[] args) {
+
+		System.out.println("Starting...");
+		ColonyGameServerMain main = new ColonyGameServerMain();
+		main.start();
+
+	}
+
+}

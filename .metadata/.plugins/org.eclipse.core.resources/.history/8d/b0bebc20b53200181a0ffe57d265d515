@@ -1,0 +1,112 @@
+package main;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ColonyGameServerMain {
+
+	private final static int PORT = 45655;
+
+	private Map<Socket, String> members = new HashMap<>();
+	{
+		members.put(new Socket(), "Daniel McBride");
+		members.put(new Socket(), "Bridgette Campbell");
+	}
+
+	public ColonyGameServerMain() {
+
+	}
+
+	private void start() {
+
+		ServerSocket service;
+		try {
+			service = new ServerSocket(PORT);
+			while (true) {
+				System.out.println("Listening...");
+				Socket client = service.accept();
+				System.out.println("Connection established.");
+				
+				new SocketMessageHandler(client).start();
+			}
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+
+	}
+
+	private class SocketMessageHandler extends Thread {
+
+		private final Socket socket;
+
+		public SocketMessageHandler(Socket socket) {
+			this.socket = socket;
+		}
+
+		@Override
+		public void run() {
+			try {
+				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+				ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+
+				oos.writeObject("Connected.");
+				String name = "";
+
+				while (!isValidName(name)) {
+					System.out.println("Requesting name.");
+					oos.writeObject("Send Name.");
+					name = (String) ois.readObject();
+					System.out.println("Checking validity of name: " + name);
+				}
+				System.out.println("Name recieved.");
+				oos.writeObject("Connected as: " + name + ".");
+				sendMembers(oos);
+
+				String input = "";
+				while (true) {
+					input = (String) ois.readObject();
+					if (input.equals("Members.")) {
+						sendMembers(oos);
+					}
+				}
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+
+		}
+
+		private void sendMembers(ObjectOutputStream oos) throws IOException {
+			List<String> names = new ArrayList<>();
+			for (Socket socket : members.keySet()) {
+				if (!socket.equals(this.socket)) {
+					names.add(members.get(socket));
+				}
+			}
+			oos.writeObject(names);
+		}
+
+		private boolean isValidName(String string) {
+			return !string.isEmpty();
+		}
+
+	}
+
+	public static void main(String[] args) {
+
+		System.out.println("Starting...");
+		ColonyGameServerMain main = new ColonyGameServerMain();
+		main.start();
+
+	}
+
+}
